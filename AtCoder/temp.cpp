@@ -2,85 +2,49 @@
 
 using namespace std;
 using ll = long long;
+using pll = pair<ll, ll>;
 
-const int MAXN = 2.5e5 + 10, MOD = 998244353;
+const int MAXN = 2e5 + 10;
 
-int n, q, a[MAXN], cnt[MAXN], s, ans[MAXN], inv[MAXN];
-ll fac[MAXN], sum[MAXN], prod[MAXN], res[MAXN];
-
-ll qpow(ll x, ll y) {
-  ll res = 1;
-  for (; y; y >>= 1, (x *= x) %= MOD) {
-    if (y & 1) (res *= x) %= MOD;
-  }
-  return res;
-}
-
-struct Query {
-  int l, r, x, id;
-  bool operator<(const Query &oth) const {
-    int ba = (l - 1) / s + 1;
-    int bb = (oth.l - 1) / s + 1;
-    if (ba != bb) return ba < bb;
-    return ba & 1 ? r < oth.r : r > oth.r;
+struct Node {
+  ll res;
+  int ia, ib, ic;
+  ll A, B, C;
+  bool operator<(const Node &oth) const {
+    return res > oth.res;
   }
 };
 
-void add(int x) {
-  int bx = (x - 1) / s + 1;
-  cnt[x]++, sum[bx]++;
-  (res[x] *= inv[cnt[x]]) %= MOD;
-  (prod[bx] *= inv[cnt[x]]) %= MOD;
-}
-
-void del(int x) {
-  int bx = (x - 1) / s + 1;
-  (res[x] *= cnt[x]) %= MOD;
-  (prod[bx] *= cnt[x]) %= MOD;
-  cnt[x]--, sum[bx]--;
-}
-
-ll qprod(int x) {
-  ll sna = 1;
-  int bx = (x - 1) / s + 1;
-  for (int i = 1; i < bx; i++) (sna *= prod[i]) %= MOD;
-  for (int i = (bx - 1) * s + 1; i <= x; i++) (sna *= res[i]) %= MOD;
-  return sna;
-}
-
-int qcnt(int x) {
-  int sna = 0, bx = (x - 1) / s + 1;
-  for (int i = 1; i < bx; i++) sna += sum[i];
-  for (int i = (bx - 1) * s + 1; i <= x; i++) sna += cnt[i];
-  return sna;
-}
+int n, k;
+ll a[3][MAXN];
 
 int main() {
   cin.tie(0)->sync_with_stdio(0);
-  cin >> n >> q;
-  for (int i = 1; i <= n; cin >> a[i++]);
-  vector<Query> qry(q);
-  for (int i = 0; i < q; i++) {
-    auto &[l, r, x, id] = qry[i];
-    cin >> l >> r >> x, id = i;
+  cin >> n >> k;
+  for (int i = 0; i < 3; i++) {
+    for (int j = 1; j <= n; cin >> a[i][j++]);
+    sort(a[i] + 1, a[i] + n + 1, greater<ll>());
   }
-  s = sqrt(n);
-  sort(qry.begin(), qry.end());
-  fac[0] = 1;
-  for (int i = 1; i <= n; i++) {
-    inv[i] = qpow(i, MOD - 2);
-    fac[i] = fac[i - 1] * i % MOD;
+  multiset<Node> st;
+  st.insert({a[0][1] * a[1][1] + a[1][1] * a[2][1] + a[0][1] * a[2][1], 1, 1, 1, a[0][1], a[1][1], a[2][1]});
+  map<pair<pair<int, int>, int>, bool> mp;
+  for (int i = 1; i < k; i++) {
+    auto [res, ia, ib, ic, A, B, C] = *st.begin();
+    st.erase(st.begin());
+    if (ia < n && !mp.count({{ia + 1, ib}, ic})) {
+      mp[{{ia + 1, ib}, ic}] = 1;
+      st.insert({a[0][ia + 1] * (B + C) + B * C, ia + 1, ib, ic, a[0][ia + 1], B, C});
+    }
+    if (ib < n && !mp.count({{ia, ib + 1}, ic})) {
+      mp[{{ia, ib + 1}, ic}] = 1;
+      st.insert({a[1][ib + 1] * (A + C) + A * C, ia, ib + 1, ic, A, a[1][ib + 1], C});
+    }
+    if (ic < n && !mp.count({{ia, ib}, ic + 1})) {
+      mp[{{ia, ib}, ic + 1}] = 1;
+      st.insert({a[2][ic + 1] * (A + B) + A * B, ia, ib, ic + 1, A, B, a[2][ic + 1]});
+    }
+    while (st.size() > k) st.erase(prev(st.end()));
   }
-  fill(res + 1, res + n + 1, 1);
-  fill(prod + 1, prod + (n - 1) / s + 2, 1);
-  int L = 1, R = 0;
-  for (auto &[l, r, x, id] : qry) {
-    for (; L > l; add(a[--L]));
-    for (; R < r; add(a[++R]));
-    for (; L < l; del(a[L++]));
-    for (; R > r; del(a[R--]));
-    ans[id] = fac[qcnt(x - 1)] * qprod(x - 1) % MOD;
-  }
-  for (int i = 0; i < q; cout << ans[i++] << '\n');
+  cout << (*st.begin()).res;
   return 0;
 }
