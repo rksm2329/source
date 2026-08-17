@@ -3,6 +3,7 @@
 
 using namespace std;
 using ll = long long;
+using pll = pair<ll, ll>;
 
 namespace io {
 	const int __SIZE = (1 << 21) + 1;
@@ -19,8 +20,9 @@ namespace io {
 		for (x = 0; __c <= '9' && __c >= '0' && !_eof; __c = Gc()) x = x * 10 + (__c & 15), _eof |= __c == EOF; x *= __f; return !_eof; }
 	template <class I> inline void print (I x) { if (!x) pc ('0'); if (x < 0) pc ('-'), x = -x;
 		while (x) qu[++ qr] = x % 10 + '0',  x /= 10; while (qr) pc (qu[qr --]); }
+  template <class I> inline void println(I x) { print(x), pc('\n'); }
 	struct Flusher_ {~Flusher_(){flush();}}io_flusher_;
-} using io::pc; using io::gc; using io::pstr; using io::gstr; using io::gi; using io::print;
+} using io::pc; using io::gc; using io::pstr; using io::gstr; using io::gi; using io::print; using io::println;
 
 const int N = 1e6, P = 1.1e7;
 
@@ -31,6 +33,29 @@ struct Node {
 
 int n, m, a[N + 10], top, root[N + 10];
 
+struct ST {
+  int fmax[20][N], fmin[20][N];
+  void init(int n) {
+    for (int i = 1; i <= n; i++) {
+      fmax[0][i] = fmin[0][i] = a[i];
+    }
+    for (int k = 1; k <= __lg(n); k++) {
+      for (int i = 1; i + (1 << k - 1) <= n; i++) {
+        fmax[k][i] = max(fmax[k - 1][i], fmax[k - 1][i + (1 << k - 1)]);
+        fmin[k][i] = min(fmin[k - 1][i], fmin[k - 1][i + (1 << k - 1)]);
+      }
+    }
+  }
+  int getmax(int l, int r) {
+    int k = __lg(r - l + 1);
+    return max(fmax[k][l], fmax[k][r - (1 << k) + 1]);
+  }
+  int getmin(int l, int r) {
+    int k = __lg(r - l + 1);
+    return min(fmin[k][l], fmin[k][r - (1 << k) + 1]);
+  }
+} ST;
+
 void update(int &cur, int ver, int l, int r, int pos) {
   pool[cur = ++top] = pool[ver];
   pool[cur].v++, pool[cur].sum += pos;
@@ -39,11 +64,18 @@ void update(int &cur, int ver, int l, int r, int pos) {
   else update(pool[cur].rs, pool[ver].rs, mid + 1, r, pos);
 }
 
-int query(int cur, int ver, int l, int r, int k) {
-  if (l == r) return l;
-  int lc = pool[pool[cur].ls].v - pool[pool[ver].ls].v;
-  if (k <= lc) return query(pool[cur].ls, pool[ver].ls, l, mid, k);
-  return query(pool[cur].rs, pool[ver].rs, mid + 1, r, k - lc);
+pll getli(int cur, int ver, int l, int r, int lc, int k) {
+  int nowc = pool[cur].v - pool[ver].v;
+  if (!nowc) return {0, 0};
+  ll nows = pool[cur].sum - pool[ver].sum;
+  if (l > lc + k) return {0, 0};
+  if (r <= lc + k + nowc - 1) return {nowc, nows};
+  if (l == r) return {0, 0};
+  int lx = pool[pool[cur].ls].v - pool[pool[ver].ls].v;
+  pll infol = getli(pool[cur].ls, pool[ver].ls, l, mid, lc, k);
+  if (infol.first < lx) return infol;
+  pll infor = getli(pool[cur].rs, pool[ver].rs, mid + 1, r, lc + lx, k);
+  return {infor.first + infol.first, infor.second + infol.second};
 }
 
 ll query(int cur, int ver, int l, int r, int L, int R) {
@@ -55,27 +87,20 @@ ll query(int cur, int ver, int l, int r, int L, int R) {
   return ans;
 }
 
-int find(int L, int R, int k) {
-  int l = 1, r = R - L + 2;
-  while (l < r) {
-    query(root[R], root[L - 1], 1, N, mid) >= k + mid - 1 ? r = mid : l = mid + 1;
-  }
-  return l;
-}
-
 int main() {
   gi(n), gi(m);
-  for (int i = 1, x; i <= n; i++) {
-    gi(x);
-    update(root[i], root[i - 1], 1, N, x);
+  for (int i = 1; i <= n; i++) {
+    gi(a[i]);
+    update(root[i], root[i - 1], 1, N, a[i]);
   }
+  ST.init(n);
   for (int i = 1, l, r, k; i <= m; i++) {
     gi(l), gi(r), gi(k);
-    ll x = find(l, r, k);
-    int xth = x == r - l + 2 ? N + 1 : query(root[r], root[l - 1], 1, N, x);
-    int prexth = x == 1 ? 0 : query(root[r], root[l - 1], 1, N, x - 1);
-    print((k * 2 + x - 2) * (x - 1) / 2 - query(root[r], root[l - 1], 1, N, 1, prexth) + query(root[r], root[l - 1], 1, N, xth, N) - (k + x - 1 + k + r - l) * (r - l - x + 2) / 2);
-    pc('\n');
+    ll len = r - l + 1;
+    auto [lc, ls] = getli(root[r], root[l - 1], 1, N, 0, k);
+    ll rs = pool[root[r]].sum - pool[root[l - 1]].sum - ls;
+    ll Lt = (k * 2 + lc - 1) * lc / 2, Rt = len * k + len * (len - 1) / 2 - Lt;
+    println(Lt - ls + rs - Rt);
   }
   return 0;
 }
