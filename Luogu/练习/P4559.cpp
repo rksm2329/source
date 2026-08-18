@@ -33,29 +33,6 @@ struct Node {
 
 int n, m, a[N + 10], top, root[N + 10];
 
-struct ST {
-  int fmax[20][N], fmin[20][N];
-  void init(int n) {
-    for (int i = 1; i <= n; i++) {
-      fmax[0][i] = fmin[0][i] = a[i];
-    }
-    for (int k = 1; k <= __lg(n); k++) {
-      for (int i = 1; i + (1 << k - 1) <= n; i++) {
-        fmax[k][i] = max(fmax[k - 1][i], fmax[k - 1][i + (1 << k - 1)]);
-        fmin[k][i] = min(fmin[k - 1][i], fmin[k - 1][i + (1 << k - 1)]);
-      }
-    }
-  }
-  int getmax(int l, int r) {
-    int k = __lg(r - l + 1);
-    return max(fmax[k][l], fmax[k][r - (1 << k) + 1]);
-  }
-  int getmin(int l, int r) {
-    int k = __lg(r - l + 1);
-    return min(fmin[k][l], fmin[k][r - (1 << k) + 1]);
-  }
-} ST;
-
 void update(int &cur, int ver, int l, int r, int pos) {
   pool[cur = ++top] = pool[ver];
   pool[cur].v++, pool[cur].sum += pos;
@@ -93,7 +70,6 @@ int main() {
     gi(a[i]);
     update(root[i], root[i - 1], 1, N, a[i]);
   }
-  ST.init(n);
   for (int i = 1, l, r, k; i <= m; i++) {
     gi(l), gi(r), gi(k);
     ll len = r - l + 1;
