@@ -2,88 +2,55 @@
 
 using namespace std;
 using ll = long long;
-using ull = unsigned long long;
 
-const int MAXN = 1e6 + 10;
+const int MAXN = 2050;
 
-int n, minf[MAXN];
-ull h[MAXN], fac[MAXN];
-vector<int> pr;
-bool vis[MAXN];
+int n, p[MAXN];
+int memo[MAXN][MAXN];
+mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 
-void init(int n) {
-  for (int i = 2; i <= n; i++) {
-    if (!vis[i]) {
-      pr.push_back(i);
-      minf[i] = i;
-    }
-    for (int p : pr) {
-      if (1ll * i * p > n) break;
-      minf[i * p] = p, vis[i * p] = 1;
-      if (i % p == 0) break;
-    }
+int qor(int x, int y) {
+  if (x > y) swap(x, y);
+  if (memo[x][y] != -1) return memo[x][y];
+  cout << "? " << x << ' ' << y << "\n";
+  cout.flush();
+  int res;
+  cin >> res;
+  if (res == -1) exit(0);
+  return memo[x][y] = res;
+}
+
+int qval(int x) {
+  int ans = 2047;
+  for (int i = 1; i <= 15; i++) {
+    int k;
+    do {
+      k = rnd() % n + 1;
+    } while (k == x);
+    ans &= qor(k, x);
   }
-  for (int i = 2; i <= n; i++) {
-    for (int k = i; k > 1; ) {
-      int x = minf[k];
-      for (; k % x == 0; k /= x, fac[i] ^= h[x]);
-    }
-    fac[i] ^= fac[i - 1];
-  }
+  return ans;
 }
 
 int main() {
   cin.tie(0)->sync_with_stdio(0);
-  mt19937_64 rnd(time(nullptr));
+  memset(memo, -1, sizeof(memo));
   cin >> n;
-  if (n == 1) {
-    cout << 1 << '\n' << 1;
-    return 0;
+  iota(p + 1, p + n + 1, 1);
+  shuffle(p + 1, p + n + 1, rnd);
+  int val = qval(p[1]), pos = p[1];
+  for (int i = 2; i <= n && val; i++) {
+    if (qor(pos, p[i]) == val) {
+      pos = p[i];
+      val = qval(pos);
+    }
   }
-  for (int i = 1; i <= n; h[i++] = rnd());
-  init(n);
-  ull sum = 0;
-  for (int i = 1; i <= n; sum ^= fac[i++]);
-  if (!sum) {
-    cout << n << '\n';
-    for (int i = 1; i <= n; i++) cout << i << ' ';
-  }
+  vector<int> res;
   for (int i = 1; i <= n; i++) {
-    if (fac[i] == sum) {
-      cout << n - 1 << '\n';
-      for (int j = 1; j <= n; j++) {
-        if (j == i) continue;
-        cout << j << ' ';
-      }
-      return 0;
-    }
+    res.push_back(i != pos ? qor(i, pos) : 0);
   }
-  __gnu_pbds::gp_hash_table<ull, int> mp;
-  int x = 0, y = 0;
-  for (int i = 1; i <= n; i++) {
-    if (mp.find(sum ^ fac[i]) != mp.end()) {
-      x = mp[sum ^ fac[i]], y = i;
-      break;
-    }
-    mp[fac[i]] = i;
-  }
-  if (x && y) {
-    cout << n - 2 << '\n';
-    for (int i = 1; i <= n; i++) {
-      if (i == x || i == y) continue;
-      cout << i << ' ';
-    }
-    return 0;
-  }
-  for (int i = 1; i <= n; i++) {
-    if (fac[i] == (sum ^ fac[2] ^ fac[n])) {
-      cout << n - 3 << '\n';
-      for (int j = 1; j <= n; j++) {
-        if (j == 2 || j == i || j == n) continue;
-        cout << j << ' ';
-      }
-      return 0;
-    }
-  }
+  cout << "! ";
+  for (int x : res) cout << x << ' ';
+  cout.flush();
   return 0;
 }
