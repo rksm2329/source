@@ -1,40 +1,29 @@
 #include <bits/stdc++.h>
 
 using namespace std;
+
 using ll = long long;
 
-const int MAXN = 5e3 + 10, INF = 2e18;
+const int MAXN = 2e5 + 10;
+const ll INF = 2e18;
 
-int n, ans, L[MAXN], R[MAXN];
-vector<int> vec;
-
-void dfs(int u, int cnt) {
-  if (u == n + 1) {
-    int edge = 0;
-    for (int u : vec) {
-      for (int v : vec) {
-        if (u == v) continue;
-        if (L[v] <= R[u] && R[v] >= R[u] || L[v] <= L[u] && R[v] >= L[u] || L[v] >= L[u] && R[v] <= R[u] || L[u] >= L[v] && R[u] <= R[v]) edge++;
-      }
-    }
-    edge >>= 1;
-    if (edge == cnt - 1) ans = max(ans, cnt);
-    return;
-  }
-  dfs(u + 1, cnt);
-  vec.push_back(u);
-  dfs(u + 1, cnt + 1);
-  vec.pop_back();
-}
+ll n, a[MAXN];
 
 void Solve() {
   cin >> n;
-  for (int i = 1; i <= n; i++) {
-    cin >> L[i] >> R[i];
+  for (int i = 1; i <= n; cin >> a[i++]);
+  ll ans = 0;
+  for (int i = 2; i <= n; i++) ans += abs(a[i] - a[i - 1]);
+  ll mx1 = -INF, mx2 = -INF, res = 0;
+  for (int r = 2; r < n; r++) {
+    mx1 = max(mx1, a[r - 1] - abs(a[r - 1] - a[r]));
+    mx2 = max(mx2, -a[r - 1] - abs(a[r - 1] - a[r]));
+    res = max(res, abs(a[r] - a[1]) - abs(a[r] - a[r + 1]) + max(mx1 - a[r + 1], mx2 + a[r + 1]));
   }
-  ans = 0;
-  dfs(1, 0);
-  cout << ans << '\n';
+  ll mn = INF;
+  for (int i = 1; i < n; i++) mn = min(mn, abs(a[i] - a[i + 1]));
+  res = max(res, abs(a[n] - a[1]) - mn);
+  cout << ans + res << '\n';
 }
 
 int main() {
