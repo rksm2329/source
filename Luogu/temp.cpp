@@ -3,66 +3,53 @@
 using namespace std;
 using ll = long long;
 
-const int MAXN = 2e5 + 10;
+const int MAXN = 4e4 + 10, INF = 2e9;
 
-struct Edge {
-  int u, v, w;
-  bool operator<(const Edge &oth) const {
-    return w < oth.w;
+struct SegTree {
+  int dat[MAXN << 2], tag[MAXN << 2];
+  #define mid (l + r >> 1)
+  #define lc root << 1
+  #define rc root << 1 | 1
+  #define LC lc, l, mid
+  #define RC rc, mid + 1, r
+  void down(int root) {
+    if (!tag[root]) return;
+    dat[lc] += tag[root], tag[lc] += tag[root];
+    dat[rc] += tag[root], tag[rc] += tag[root];
+    tag[root] = 0;
   }
-};
-
-int n, m, fa[MAXN], tfa[MAXN];
-bool vis[MAXN];
-vector<Edge> E;
-vector<int> node;
-
-int find(int x) {
-  return fa[x] == x ? x : fa[x] = find(fa[x]);
-}
-
-int tfind(int x) {
-  return tfa[x] == x ? x : tfa[x] = tfind(tfa[x]);
-}
-
-void merge(int u, int v) {
-  u = find(u), v = find(v);
-  if (u != v) fa[u] = v;
-}
-
-void clear(int u) {
-  if (vis[u]) return;
-  node.push_back(u), vis[u] = 1, tfa[u] = u;
-}
-
-int kruskal() {
-  sort(E.begin() + 1, E.begin() + m + 1);
-  iota(fa + 1, fa + n + 1, 1);
-  int ans = 0;
-  for (int i = 1, j = 1; i <= m; i++) {
-    auto [u, v, w] = E[i];
-    if (w != E[i - 1].w) {
-      for (; j < i; j++) merge(E[j].u, E[j].v);
-      for (int x : node) vis[x] = 0;
-      node.clear();
+  void update(int root, int l, int r, int L, int R, int val) {
+    if (L <= l && R >= r) {
+      dat[root] += val, tag[root] += val;
+      return;
     }
-    u = find(u), v = find(v);
-    if (u == v) continue;
-    clear(u), clear(v);
-    u = tfind(u), v = tfind(v);
-    u == v ? ans++ : tfa[u] = v;
+    down(root);
+    if (L <= mid) update(LC, L, R, val);
+    if (R > mid) update(RC, L, R, val);
+    dat[root] = max(dat[lc], dat[rc]);
   }
-  return ans;
-}
+  int query(int root, int l, int r, int L, int R) {
+    if (L <= l && R >= r) return dat[root];
+    if (L > r || R < l) return -INF;
+    down(root);
+    return max(query(LC, L, R), query(RC, L, R));
+  }
+} T[55];
+
+int n, k, a[MAXN], pos[MAXN];
 
 int main() {
   cin.tie(0)->sync_with_stdio(0);
-  cin >> n >> m;
-  E.resize(m + 1);
-  for (int i = 1; i <= m; i++) {
-    auto &[u, v, w] = E[i];
-    cin >> u >> v >> w;
+  cin >> n >> k;
+  for (int i = 1; i <= n; cin >> a[i++]);
+  for (int i = 1; i <= n; i++) {
+    for (int j = 0; j <= k; j++) T[j].update(1, 0, n, pos[a[i]], i - 1, 1);
+    for (int j = k; j >= 1; j--) {
+      int now = T[j - 1].query(1, 0, n, 0, i - 1);
+      T[j].update(1, 0, n, i, i, now);
+    }
+    pos[a[i]] = i;
   }
-  cout << kruskal();
+  cout << T[k].query(1, 0, n, n, n);
   return 0;
 }
