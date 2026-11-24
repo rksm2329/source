@@ -1,91 +1,87 @@
 #include <bits/stdc++.h>
-// #define localtest
 
 using namespace std;
-using ll = long long;
 using pii = pair<int, int>;
 
 const int MAXN = 5e5 + 10, INF = 2e9;
 
-struct SegTree {
-  int dat[MAXN << 2];
-  #define mid (l + r >> 1)
-  #define lc root << 1
-  #define rc root << 1 | 1
-  #define LC lc, l, mid
-  #define RC rc, mid + 1, r
-  void build(int root, int l, int r) {
-    if (l == r) {
-      dat[root] = -INF;
-      return;
-    }
-    build(LC), build(RC);
-    dat[root] = max(dat[lc], dat[rc]);
+namespace io {
+  const int __SIZE = (1 << 21) + 1;
+  char ibuf[__SIZE], *iS, *iT, obuf[__SIZE], *oS = obuf, *oT = oS + __SIZE - 1, __c, qu[55]; int __f, qr, _eof;
+  #define Gc() (iS == iT ? (iT = (iS = ibuf) + fread(ibuf, 1, __SIZE, stdin), (iS == iT ? EOF : *iS ++)) : *iS ++)
+  inline void flush () { fwrite (obuf, 1, oS - obuf, stdout), oS = obuf; }
+  inline void gc (char &x) { x = Gc(); }
+  inline void pc (char x) { *oS ++ = x; if (oS == oT) flush (); }
+  inline void pstr (const char *s) { int __len = strlen(s); for (__f = 0; __f < __len; ++__f) pc (s[__f]); }
+  inline void gstr (char *s) { for(__c = Gc(); __c < 32 || __c > 126 || __c == ' ';)  __c = Gc();
+    for(; __c > 31 && __c < 127 && __c != ' ' && __c != '\n' && __c != '\r'; ++s, __c = Gc()) *s = __c; *s = 0; }
+  template <class I> inline bool gi (I &x) { _eof = 0;
+    for (__f = 1, __c = Gc(); (__c < '0' || __c > '9') && !_eof; __c = Gc()) { if (__c == '-') __f = -1; _eof |= __c == EOF; }
+    for (x = 0; __c <= '9' && __c >= '0' && !_eof; __c = Gc()) x = x * 10 + (__c & 15), _eof |= __c == EOF; x *= __f; return !_eof; }
+  template <class I> inline void print (I x) { if (!x) pc ('0'); if (x < 0) pc ('-'), x = -x;
+    while (x) qu[++ qr] = x % 10 + '0',  x /= 10; while (qr) pc (qu[qr --]); }
+  struct Flusher_ {~Flusher_(){flush();}}io_flusher_;
+} using io::pc; using io::gc; using io::pstr; using io::gstr; using io::gi; using io::print;
+
+struct BIT {
+  int dat[MAXN], n;
+  void init(int n) {
+    this->n = n;
+    fill(dat + 1, dat + n + 1, -INF);
   }
-  void update(int root, int l, int r, int pos, ll val) {
-    if (l == r) {
-      dat[root] = val;
-      return;
-    }
-    pos <= mid ? update(LC, pos, val) : update(RC, pos, val);
-    dat[root] = max(dat[lc], dat[rc]);
+  void add(int x, int val) {
+    for (; x <= n; x += x & -x)
+      dat[x] = max(dat[x], val);
   }
-  int query(int root, int l, int r, int L, int R) {
-    if (L <= l && R >= r) return dat[root];
-    if (L > R || L > r || R < l) return -INF;
-    return max(query(LC, L, R), query(RC, L, R));
+  int query(int x) {
+    int res = -INF;
+    for (; x; x -= x & -x)
+      res = max(res, dat[x]);
+    return res;
   }
 } T[2];
 
-int n, u, d, s, dp[MAXN];
+int n, u, d, s, f[MAXN], g[MAXN];
 vector<pii> arr[MAXN];
 
 int main() {
-  #ifndef localtest
-  freopen("salesman.in", "r", stdin);
-  freopen("salesman.out", "w", stdout);
-  #endif
-  cin.tie(0)->sync_with_stdio(0);
-  cin >> n >> u >> d >> s;
+  gi(n), gi(u), gi(d), gi(s);
   int maxt = 0, L = s;
   for (int i = 1, t, l, m; i <= n; i++) {
-    cin >> t >> l >> m;
+    gi(t), gi(l), gi(m);
     maxt = max(maxt, t), L = max(L, l);
     arr[t].push_back({l, m});
   }
-  arr[++maxt].push_back({s, 0});
-  T[0].build(1, 1, L), T[1].build(1, 1, L);
-  T[0].update(1, 1, L, s, -s * u);
-  T[1].update(1, 1, L, s, s * d);
-  fill(dp + 1, dp + L + 1, -INF);
+  T[0].init(L), T[1].init(L);
+  T[0].add(L - s + 1, -s * u);
+  T[1].add(s, s * d);
   for (int i = 1; i <= maxt; i++) {
+    if (arr[i].empty()) continue;
     sort(arr[i].begin(), arr[i].end());
-    for (auto &[l, m] : arr[i]) {
-      int val1 = T[0].query(1, 1, L, l + 1, L) + l * u;
-      int val2 = T[1].query(1, 1, L, 1, l - 1) - l * d;
-      int now = max(val1, val2) + m;
-      dp[l] = max(dp[l], now);
-      T[0].update(1, 1, L, l, now - l * u);
-      T[1].update(1, 1, L, l, now + l * d);
+    int k = arr[i].size();
+    for (int j = 0; j < k; j++) {
+      auto [l, m] = arr[i][j];
+      int now = max(T[0].query(L - l) + l * u,
+                    T[1].query(l) - l * d) + m;
+      f[j] = g[j] = now;
     }
-    for (auto &[l, m] : arr[i]) {
-      T[0].update(1, 1, L, l, -INF);
-      T[1].update(1, 1, L, l, -INF);
+    for (int j = 1; j < k; j++) {
+      int dx = arr[i][j].first - arr[i][j - 1].first;
+      f[j] = max(f[j], f[j - 1] - dx * d + arr[i][j].second);
     }
-    sort(arr[i].begin(), arr[i].end(), greater<pii>());
-    for (auto &[l, m] : arr[i]) {
-      int val1 = T[0].query(1, 1, L, l + 1, L) + l * u;
-      int val2 = T[1].query(1, 1, L, 1, l - 1) - l * d;
-      int now = max(val1, val2) + m;
-      dp[l] = max(dp[l], now);
-      T[0].update(1, 1, L, l, now - l * u);
-      T[1].update(1, 1, L, l, now + l * d);
+    for (int j = k - 2; j >= 0; j--) {
+      int dx = arr[i][j + 1].first - arr[i][j].first;
+      g[j] = max(g[j], g[j + 1] - dx * u + arr[i][j].second);
     }
-    for (auto &[l, m] : arr[i]) {
-      T[0].update(1, 1, L, l, dp[l] - l * u);
-      T[1].update(1, 1, L, l, dp[l] + l * d);
+    for (int j = 0; j < k; j++) {
+      int l = arr[i][j].first;
+      int now = max(f[j], g[j]);
+      T[0].add(L - l + 1, now - l * u);
+      T[1].add(l, now + l * d);
     }
   }
-  cout << max(0, dp[s]);
+  int ans = max(T[0].query(L - s) + s * u,
+                T[1].query(s) - s * d);
+  print(max(0, ans));
   return 0;
 }
