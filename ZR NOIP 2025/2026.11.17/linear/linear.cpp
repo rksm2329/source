@@ -91,8 +91,10 @@ void Solve() {
 }
 
 int main() {
+  freopen("linear.in", "r", stdin);
+  freopen("linear.out", "w", stdout);
   cin.tie(0)->sync_with_stdio(0);
   int T;
-  for (cin >> T; T--; Solve());
+  for (T = 1; T--; Solve());
   return 0;
 }
